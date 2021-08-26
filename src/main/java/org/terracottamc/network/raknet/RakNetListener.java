@@ -31,7 +31,6 @@ import org.terracottamc.network.raknet.protocol.ProtocolDecoder;
 import org.terracottamc.network.raknet.protocol.ProtocolEncoder;
 import org.terracottamc.network.raknet.protocol.ProtocolHandler;
 import org.terracottamc.server.Server;
-import org.terracottamc.server.ServerConfigurationData;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
@@ -68,9 +67,8 @@ public class RakNetListener {
      * Binds this {@link org.terracottamc.network.raknet.RakNetListener}
      */
     public void bind() {
-        final ServerConfigurationData configurationData = Server.getInstance().getServerConfigurationData();
-        final InetSocketAddress address = new InetSocketAddress(configurationData.getAddress(),
-                configurationData.getPort());
+        final Server server = Server.getInstance();
+        final InetSocketAddress address = new InetSocketAddress(server.getAddress(), server.getPort());
 
         try {
             this.bossGroup = Epoll.isAvailable() ? new EpollEventLoopGroup() : new NioEventLoopGroup();
@@ -112,7 +110,7 @@ public class RakNetListener {
                     });
 
             final ChannelFutureListener channelFutureListener = channelFuture ->
-                    Server.getInstance().getLogger().info("Starting Terracotta on " + address.getHostName() + ":" +
+                    Server.getInstance().getLogger().info("Started Terracotta on " + address.getHostName() + ":" +
                             address.getPort() + " (Bedrock Edition v" + Protocol.MINECRAFT_VERSION
                             .replace(Protocol.MINECRAFT_VERSION.split("\\.")[2], "x") + ")");
 

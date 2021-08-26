@@ -76,7 +76,7 @@ public class LoginPacketHandler implements IPacketHandler<LoginPacket> {
             }
         }
 
-        if (server.getPlayers().size() >= server.getServerConfigurationData().getMaxPlayers()) {
+        if (server.getPlayers().size() >= server.getMaxPlayers()) {
             playStatus = PlayStatus.LOGIN_FAILED_SERVER_FULL;
         }
 
@@ -89,7 +89,7 @@ public class LoginPacketHandler implements IPacketHandler<LoginPacket> {
         server.addPlayer(player);
 
         final ResourcePacksInfoPacket resourcePacksInfoPacket = new ResourcePacksInfoPacket();
-        resourcePacksInfoPacket.setForceAccept(Server.getInstance().getServerConfigurationData().isForceResourcePacks());
+        resourcePacksInfoPacket.setForceAccept(Server.getInstance().isForceResourcePacks());
         resourcePacksInfoPacket.setScripting(false);
         resourcePacksInfoPacket.setForceServerPacks(false);
 

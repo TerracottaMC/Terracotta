@@ -47,7 +47,6 @@ public class Player extends EntityHuman {
         this.xboxId = this.loginChainData.getXboxId();
         this.playerNetworkConnection = playerNetworkConnection;
         this.server = this.playerNetworkConnection.getServer();
-        this.viewDistance = this.server.getServerConfigurationData().getViewDistance();
     }
 
     /**

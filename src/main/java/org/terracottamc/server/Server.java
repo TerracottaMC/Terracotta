@@ -1,5 +1,8 @@
 package org.terracottamc.server;
 
+import org.terracottamc.config.Config;
+import org.terracottamc.config.ConfigType;
+import org.terracottamc.entity.player.GameMode;
 import org.terracottamc.entity.player.Player;
 import org.terracottamc.logging.Logger;
 import org.terracottamc.network.packet.registry.PacketRegistry;
@@ -10,8 +13,9 @@ import org.terracottamc.resourcepack.ResourcePackManager;
 import org.terracottamc.terminal.Terminal;
 import org.terracottamc.terminal.TerminalThread;
 import org.terracottamc.util.BedrockResourceDataReader;
-import org.terracottamc.util.FileManagementUtil;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.HashMap;
@@ -34,17 +38,19 @@ public class Server {
     private static Server instance;
 
     private final long serverId;
-    private final ServerConfigurationData serverConfigurationData;
     private final PacketRegistry packetRegistry;
     private final Map<InetSocketAddress, Player> players = new HashMap<>();
     private final Logger logger = new Logger();
     private final ResourcePackManager resourcePackManager;
     private final MojangSecurityKeyFactory mojangSecurityKeyFactory;
     private final MojangSecurityDecryptionHelper mojangSecurityDecryptionHelper;
+    private final File dataFolder;
 
     private RakNetListener rakNetListener;
     private TerminalThread terminalThread;
     private boolean running;
+
+    private Config serverConfig;
 
     /**
      * Creates a new {@link org.terracottamc.server.Server}
@@ -54,7 +60,6 @@ public class Server {
 
         this.packetRegistry = new PacketRegistry();
         this.serverId = UUID.randomUUID().getMostSignificantBits();
-        this.serverConfigurationData = FileManagementUtil.getServerConfigurationData();
         this.resourcePackManager = new ResourcePackManager();
         this.mojangSecurityKeyFactory = new MojangSecurityKeyFactory();
         this.mojangSecurityDecryptionHelper = new MojangSecurityDecryptionHelper();
@@ -62,13 +67,50 @@ public class Server {
         BedrockResourceDataReader.initialize();
 
         this.mojangSecurityDecryptionHelper.generateMojangRootKey();
+
+        this.dataFolder = new File(System.getProperty("user.dir"));
     }
 
     /**
      * Starts this {@link org.terracottamc.server.Server}
      */
     public void start() {
+        Thread.currentThread().setName("Terracotta Server-Thread");
+
         this.running = true;
+
+        final File serverConfigFile = new File(this.dataFolder.getPath(), "properties.json");
+
+        if (!serverConfigFile.exists()) {
+            try {
+                serverConfigFile.createNewFile();
+
+                this.serverConfig = new Config(ConfigType.JSON).load(serverConfigFile);
+                this.serverConfig.setValue("address", "0.0.0.0");
+                this.serverConfig.setValue("port", 19132);
+                this.serverConfig.setValue("maxPlayers", 20);
+                this.serverConfig.setValue("motd", "Terracotta");
+                this.serverConfig.setValue("submotd", "developed by Kaooot");
+                this.serverConfig.setValue("defaultGameMode", "Creative");
+                this.serverConfig.setValue("forceResourcePacks", false);
+                this.serverConfig.setValue("viewDistance", 8);
+                this.serverConfig.save();
+            } catch (final IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            this.serverConfig = new Config(ConfigType.JSON).load(serverConfigFile);
+        }
+
+        final File file = new File(this.dataFolder.getPath(), "test.yml");
+
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (final IOException e) {
+                e.printStackTrace();
+            }
+        }
 
         final Terminal terminal = new Terminal();
 
@@ -108,15 +150,6 @@ public class Server {
      */
     public long getServerId() {
         return this.serverId;
-    }
-
-    /**
-     * Returns the {@link org.terracottamc.server.ServerConfigurationData} of this {@link org.terracottamc.server.Server}
-     *
-     * @return a fresh {@link org.terracottamc.server.ServerConfigurationData}
-     */
-    public ServerConfigurationData getServerConfigurationData() {
-        return this.serverConfigurationData;
     }
 
     /**
@@ -184,6 +217,87 @@ public class Server {
      */
     public MojangSecurityDecryptionHelper getMojangSecurityDecryptionHelper() {
         return this.mojangSecurityDecryptionHelper;
+    }
+
+    /**
+     * Retrieves the data folder of this {@link org.terracottamc.server.Server}
+     *
+     * @return a fresh {@link java.io.File}
+     */
+    public File getDataFolder() {
+        return this.dataFolder;
+    }
+
+    /**
+     * Retrieves the address of this {@link org.terracottamc.server.Server}
+     *
+     * @return a fresh address that is used to start the {@link org.terracottamc.server.Server}
+     */
+    public String getAddress() {
+        return this.serverConfig.getString("address");
+    }
+
+    /**
+     * Retrieves the server's port
+     *
+     * @return a fresh port the server should be bound to
+     */
+    public int getPort() {
+        return this.serverConfig.getInt("port");
+    }
+
+    /**
+     * Retrieves the server's amount of max players
+     *
+     * @return a fresh amount of max players
+     */
+    public int getMaxPlayers() {
+        return this.serverConfig.getInt("maxPlayers");
+    }
+
+    /**
+     * Retrieves the server's message of the day
+     *
+     * @return a fresh motd as {@link java.lang.String}
+     */
+    public String getMotd() {
+        return this.serverConfig.getString("motd");
+    }
+
+    /**
+     * Retrieves the server's sub message of the day
+     *
+     * @return a fresh submotd as {@link java.lang.String}
+     */
+    public String getSubMotd() {
+        return this.serverConfig.getString("submotd");
+    }
+
+    /**
+     * Retrieves the server's default {@link org.terracottamc.entity.player.GameMode}
+     *
+     * @return a fresh standard {@link org.terracottamc.entity.player.GameMode}
+     */
+    public GameMode getDefaultGameMode() {
+        return GameMode.retrieveGameModeByIdentifier(this.serverConfig.getString("defaultGameMode"));
+    }
+
+    /**
+     * Retrieves whether the server resource packs should be forced to the client or not
+     *
+     * @return whether force resource packs takes place or not
+     */
+    public boolean isForceResourcePacks() {
+        return this.serverConfig.getBoolean("forceResourcePacks");
+    }
+
+    /**
+     * Retrieves the view distance in chunks of this {@link org.terracottamc.server.Server}
+     *
+     * @return the view distance in chunks
+     */
+    public int getViewDistance() {
+        return this.serverConfig.getInt("viewDistance");
     }
 
     /**

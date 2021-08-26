@@ -25,7 +25,7 @@ public interface Protocol {
     String MINECRAFT_VERSION = "1.17.11";
     String MINECRAFT_VERSION_v1_17_0 = "1.17.0";
 
-    int BATCH_PACKET = 0xfe;
+    short BATCH_PACKET = 0xfe;
     byte LOGIN_PACKET = 0x01;
     byte PLAY_STATUS_PACKET = 0x02;
     // byte SERVER_TO_CLIENT_HANDSHAKE_PACKET = 0x03;
@@ -47,7 +47,7 @@ public interface Protocol {
     byte SET_LOCAL_PLAYER_AS_INITIALIZED_PACKET = 0x71;
     byte AVAILABLE_ENTITY_IDENTIFIERS_PACKET = 0x77;
     byte BIOME_DEFINITION_LIST_PACKET = 0x7a;
-    int CLIENT_CACHE_STATUS_PACKET = 0x81;
-    int CREATIVE_CONTENT_PACKET = 0x91;
-    int VIOLATION_WARNING_PACKET = 0x9c;
+    short CLIENT_CACHE_STATUS_PACKET = 0x81;
+    short CREATIVE_CONTENT_PACKET = 0x91;
+    short VIOLATION_WARNING_PACKET = 0x9c;
 }

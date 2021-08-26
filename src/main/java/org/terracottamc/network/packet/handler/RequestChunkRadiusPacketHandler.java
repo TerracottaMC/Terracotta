@@ -18,8 +18,7 @@ public class RequestChunkRadiusPacketHandler implements IPacketHandler<RequestCh
 
     @Override
     public void handle(final RequestChunkRadiusPacket packet, final Player player) {
-        final int viewDistance = Math.min(packet.getChunkRadius(), player.getServer().getServerConfigurationData()
-                .getViewDistance());
+        final int viewDistance = Math.min(packet.getChunkRadius(), player.getServer().getViewDistance());
 
         player.setViewDistance(viewDistance);
     }

@@ -1,6 +1,4 @@
-package org.terracottamc;
-
-import org.terracottamc.server.Server;
+package org.terracottamc.config;
 
 /**
  * Copyright (c) 2021, TerracottaMC
@@ -13,10 +11,9 @@ import org.terracottamc.server.Server;
  * @author Kaooot
  * @version 1.0
  */
-public class Terracotta {
+public enum ConfigType {
 
-    public static void main(final String[] args) {
-        final Server server = new Server();
-        server.start();
-    }
+    JSON,
+    YAML,
+    PROPERTIES
 }

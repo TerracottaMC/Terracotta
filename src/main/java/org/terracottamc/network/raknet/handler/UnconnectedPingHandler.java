@@ -41,11 +41,10 @@ public class UnconnectedPingHandler extends UdpPacketHandler<UnconnectedPing> {
 
         final ServerInfo serverInfo = new ServerInfo();
         serverInfo.setServerId(server.getServerId());
-        serverInfo.setMotd(server.getServerConfigurationData().getMotd());
-        serverInfo.setSubmotd(server.getServerConfigurationData().getSubmotd());
-        serverInfo.setMaxPlayers(server.getServerConfigurationData().getMaxPlayers());
-        serverInfo.setDefaultGameMode(GameMode.
-                retrieveGameModeByIdentifier(server.getServerConfigurationData().getDefaultGameMode()));
+        serverInfo.setMotd(server.getMotd());
+        serverInfo.setSubmotd(server.getSubMotd());
+        serverInfo.setMaxPlayers(server.getMaxPlayers());
+        serverInfo.setDefaultGameMode(server.getDefaultGameMode());
 
         final UnconnectedPong unconnectedPong = new UnconnectedPong();
         unconnectedPong.setClientTime(unconnectedPing.getClientTime());

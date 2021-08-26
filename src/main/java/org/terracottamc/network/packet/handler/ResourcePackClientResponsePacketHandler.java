@@ -150,7 +150,7 @@ public class ResourcePackClientResponsePacketHandler implements IPacketHandler<R
      */
     private void sendResourcePackStack(final Player player) {
         final ResourcePackStackPacket resourcePackStackPacket = new ResourcePackStackPacket();
-        resourcePackStackPacket.setMustAccept(player.getServer().getServerConfigurationData().isForceResourcePacks());
+        resourcePackStackPacket.setMustAccept(player.getServer().isForceResourcePacks());
 
         player.getPlayerNetworkConnection().sendPacket(resourcePackStackPacket);
     }
