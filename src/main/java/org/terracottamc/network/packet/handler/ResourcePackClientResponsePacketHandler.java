@@ -1,6 +1,5 @@
 package org.terracottamc.network.packet.handler;
 
-import org.terracottamc.entity.player.GameMode;
 import org.terracottamc.entity.player.Player;
 import org.terracottamc.math.Vector;
 import org.terracottamc.network.packet.AvailableEntityIdentifiersPacket;
@@ -14,6 +13,7 @@ import org.terracottamc.network.packet.type.GamePublishSetting;
 import org.terracottamc.network.packet.type.ResourcePackEntry;
 import org.terracottamc.network.packet.type.ResourcePackResponseStatus;
 import org.terracottamc.resourcepack.ResourcePack;
+import org.terracottamc.server.Server;
 import org.terracottamc.util.BedrockResourceDataReader;
 import org.terracottamc.world.Difficulty;
 import org.terracottamc.world.Dimension;
@@ -35,13 +35,15 @@ public class ResourcePackClientResponsePacketHandler implements IPacketHandler<R
 
     @Override
     public void handle(final ResourcePackClientResponsePacket packet, final Player player) {
+        final Server server = player.getServer();
+
         switch (packet.getResponseStatus()) {
             case REFUSED:
                 player.disconnect(ResourcePackResponseStatus.REFUSED.name());
                 break;
             case SEND_PACKS:
                 for (final ResourcePackEntry resourcePackEntry : packet.getResourcePackEntries()) {
-                    final ResourcePack resourcePack = player.getServer().getResourcePackManager()
+                    final ResourcePack resourcePack = server.getResourcePackManager()
                             .retrieveResourcePackById(resourcePackEntry.getUuid());
 
                     if (resourcePack != null) {
@@ -65,7 +67,7 @@ public class ResourcePackClientResponsePacketHandler implements IPacketHandler<R
                 final StartGamePacket startGamePacket = new StartGamePacket();
                 startGamePacket.setEntityUniqueId(player.getEntityId());
                 startGamePacket.setEntityId(player.getEntityId());
-                startGamePacket.setGameMode(GameMode.SURVIVAL); // TODO
+                startGamePacket.setGameMode(server.getDefaultGameMode());
                 startGamePacket.setVector(new Vector(0f, 6f, 0f)); // TODO
                 startGamePacket.setYaw(0f);
                 startGamePacket.setPitch(0f);
@@ -108,7 +110,7 @@ public class ResourcePackClientResponsePacketHandler implements IPacketHandler<R
                 startGamePacket.setNetherType(false);
                 startGamePacket.setExperimentalGameplay(false);
                 startGamePacket.setWorldId("");
-                startGamePacket.setWorldName("world"); // TODO
+                startGamePacket.setWorldName(server.getDefaultWorldName());
                 startGamePacket.setPremiumWorldTemplateId("");
                 startGamePacket.setTrail(false);
                 startGamePacket.setMovementServerAuthoritative(false);

@@ -21,8 +21,8 @@ public class SetLocalPlayerAsInitializedPacket extends Packet {
     }
 
     @Override
-    public void serialize() {
-        super.serialize();
+    public void deserialize() {
+        super.deserialize();
 
         this.playerEntityId = this.readUnsignedVarLong();
     }

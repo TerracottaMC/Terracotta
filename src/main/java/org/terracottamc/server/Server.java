@@ -84,23 +84,22 @@ public class Server {
         if (!serverConfigFile.exists()) {
             try {
                 serverConfigFile.createNewFile();
-
-                this.serverConfig = new Config(ConfigType.JSON).load(serverConfigFile);
-                this.serverConfig.addDefault("address", "0.0.0.0");
-                this.serverConfig.addDefault("port", 19132);
-                this.serverConfig.addDefault("maxPlayers", 20);
-                this.serverConfig.addDefault("motd", "Terracotta");
-                this.serverConfig.addDefault("submotd", "developed by Kaooot");
-                this.serverConfig.addDefault("defaultGameMode", "Creative");
-                this.serverConfig.addDefault("forceResourcePacks", false);
-                this.serverConfig.addDefault("viewDistance", 8);
-                this.serverConfig.save();
             } catch (final IOException e) {
                 e.printStackTrace();
             }
-        } else {
-            this.serverConfig = new Config(ConfigType.JSON).load(serverConfigFile);
         }
+
+        this.serverConfig = new Config(ConfigType.JSON).load(serverConfigFile);
+        this.serverConfig.addDefault("address", "0.0.0.0");
+        this.serverConfig.addDefault("port", 19132);
+        this.serverConfig.addDefault("maxPlayers", 20);
+        this.serverConfig.addDefault("motd", "Terracotta");
+        this.serverConfig.addDefault("submotd", "developed by Kaooot");
+        this.serverConfig.addDefault("defaultWorldName", "world");
+        this.serverConfig.addDefault("defaultGameMode", "Creative");
+        this.serverConfig.addDefault("forceResourcePacks", false);
+        this.serverConfig.addDefault("viewDistance", 8);
+        this.serverConfig.save();
 
         final Terminal terminal = new Terminal();
 
@@ -261,6 +260,15 @@ public class Server {
      */
     public String getSubMotd() {
         return this.serverConfig.getString("submotd");
+    }
+
+    /**
+     * Retrieves the standard world name of this {@link org.terracottamc.server.Server}
+     *
+     * @return a fresh world name as {@link java.lang.String}
+     */
+    public String getDefaultWorldName() {
+        return this.serverConfig.getString("defaultWorldName");
     }
 
     /**
