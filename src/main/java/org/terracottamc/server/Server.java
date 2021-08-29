@@ -86,30 +86,20 @@ public class Server {
                 serverConfigFile.createNewFile();
 
                 this.serverConfig = new Config(ConfigType.JSON).load(serverConfigFile);
-                this.serverConfig.setValue("address", "0.0.0.0");
-                this.serverConfig.setValue("port", 19132);
-                this.serverConfig.setValue("maxPlayers", 20);
-                this.serverConfig.setValue("motd", "Terracotta");
-                this.serverConfig.setValue("submotd", "developed by Kaooot");
-                this.serverConfig.setValue("defaultGameMode", "Creative");
-                this.serverConfig.setValue("forceResourcePacks", false);
-                this.serverConfig.setValue("viewDistance", 8);
+                this.serverConfig.addDefault("address", "0.0.0.0");
+                this.serverConfig.addDefault("port", 19132);
+                this.serverConfig.addDefault("maxPlayers", 20);
+                this.serverConfig.addDefault("motd", "Terracotta");
+                this.serverConfig.addDefault("submotd", "developed by Kaooot");
+                this.serverConfig.addDefault("defaultGameMode", "Creative");
+                this.serverConfig.addDefault("forceResourcePacks", false);
+                this.serverConfig.addDefault("viewDistance", 8);
                 this.serverConfig.save();
             } catch (final IOException e) {
                 e.printStackTrace();
             }
         } else {
             this.serverConfig = new Config(ConfigType.JSON).load(serverConfigFile);
-        }
-
-        final File file = new File(this.dataFolder.getPath(), "test.yml");
-
-        if (!file.exists()) {
-            try {
-                file.createNewFile();
-            } catch (final IOException e) {
-                e.printStackTrace();
-            }
         }
 
         final Terminal terminal = new Terminal();

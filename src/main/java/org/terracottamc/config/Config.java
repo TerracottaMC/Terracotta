@@ -105,6 +105,7 @@ public class Config {
 
     /**
      * Sets a value with the given key to this {@link org.terracottamc.config.Config}
+     * Note that property files are only accepting {@link java.lang.String} values
      *
      * @param key   which is the holder of the value that should be set
      * @param value the value that should be set
@@ -118,6 +119,38 @@ public class Config {
             case PROPERTIES:
                 this.properties.setProperty(key, String.valueOf(value));
                 break;
+        }
+    }
+
+    /**
+     * Adds a default value with the given key to this {@link org.terracottamc.config.Config}
+     *
+     * @param key   which is the holder of the value that should be added as default value
+     * @param value the value that should be added as default value
+     */
+    public void addDefault(final String key, final Object value) {
+        if (!this.exists(key)) {
+            this.setValue(key, value);
+        }
+    }
+
+    /**
+     * Adds a bunch of default values to this {@link org.terracottamc.config.Config}
+     *
+     * @param defaultValues the values which should be added to this {@link org.terracottamc.config.Config}
+     */
+    public void addDefaults(final LinkedHashMap<String, Object> defaultValues) {
+        boolean containsKey = false;
+
+        for (final String key : defaultValues.keySet()) {
+            if (this.exists(key)) {
+                containsKey = true;
+                break;
+            }
+        }
+
+        if (!containsKey) {
+            this.configurationData.putAll(defaultValues);
         }
     }
 
