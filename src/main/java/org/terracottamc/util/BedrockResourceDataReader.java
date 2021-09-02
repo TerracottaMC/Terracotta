@@ -6,18 +6,26 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import org.terracottamc.network.packet.Protocol;
+import org.terracottamc.taglib.NBTBuilder;
+import org.terracottamc.taglib.nbt.io.NBTReader;
+import org.terracottamc.taglib.nbt.tag.NBTTagCompound;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Copyright (c) 2021, TerracottaMC
@@ -38,6 +46,7 @@ public class BedrockResourceDataReader {
     private static final Map<Integer, Map<String, Integer>> itemNameRuntimeIds = new HashMap<>();
     private static final Map<Integer, byte[]> entityIdentifiersData = new HashMap<>();
     private static final Map<Integer, byte[]> biomeDefinitionsData = new HashMap<>();
+    private static final Map<Integer, Map<Integer, NBTTagCompound>> blockPalettes = new HashMap<>();
 
     /**
      * Initializes this {@link org.terracottamc.util.BedrockResourceDataReader}
@@ -52,6 +61,7 @@ public class BedrockResourceDataReader {
         final File creativeItemsFolder = new File(bedrockFile.getPath() + "/creative_items/");
         final File entityIdentifiersFolder = new File(bedrockFile.getPath() + "/entity_identifiers/");
         final File biomeDefinitionsFolder = new File(bedrockFile.getPath() + "/biome_definitions/");
+        final File blockPaletteFolder = new File(bedrockFile.getPath() + "/block_palette/");
 
         // ItemPalette
         if (itemPaletteFolder.isDirectory()) {
@@ -144,6 +154,52 @@ public class BedrockResourceDataReader {
                     try {
                         BedrockResourceDataReader.biomeDefinitionsData.put(protocolVersion,
                                 ByteStreams.toByteArray(new FileInputStream(file)));
+                    } catch (final IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
+        // BlockPalette
+        if (blockPaletteFolder.isDirectory()) {
+            for (final File file : Objects.requireNonNull(blockPaletteFolder.listFiles())) {
+                final String minecraftVersion = file.getName().split("\\.")[1]
+                        .replaceAll("_", ".");
+                final int protocolVersion = BedrockResourceDataReader
+                        .retrieveProtocolVersionByMinecraftVersion(minecraftVersion);
+
+                if (protocolVersion != -1) {
+                    try (final FileInputStream fileInputStream = new FileInputStream(file)) {
+                        final GZIPInputStream gzipInputStream = new GZIPInputStream(new DataInputStream(fileInputStream));
+                        final byte[] blockPaletteData = ByteStreams.toByteArray(gzipInputStream);
+
+                        if (blockPaletteData.length > 0) {
+                            final ByteBuf buffer = PooledByteBufAllocator.DEFAULT.directBuffer();
+                            buffer.writeBytes(blockPaletteData);
+
+                            final NBTReader nbtReader = new NBTBuilder()
+                                    .withIOBuffer(buffer)
+                                    .withByteOrder(ByteOrder.BIG_ENDIAN)
+                                    .buildReader();
+
+                            final List<NBTTagCompound> nbtTagCompounds = (List<NBTTagCompound>)
+                                    nbtReader.createCompound().getList("blocks");
+
+                            int blockRuntimeId = 0;
+
+                            final Map<Integer, NBTTagCompound> nbtDataMap = new HashMap<>();
+
+                            for (final NBTTagCompound nbtTagCompound : nbtTagCompounds) {
+                                blockRuntimeId++;
+
+                                nbtDataMap.put(blockRuntimeId, nbtTagCompound);
+                            }
+
+                            BedrockResourceDataReader.blockPalettes.put(protocolVersion, nbtDataMap);
+                        }
+
+                        gzipInputStream.close();
                     } catch (final IOException e) {
                         e.printStackTrace();
                     }
@@ -252,6 +308,55 @@ public class BedrockResourceDataReader {
         }
 
         return null;
+    }
+
+    /**
+     * Retrieves the {@link org.terracottamc.taglib.nbt.tag.NBTTagCompound} of by the given block runtime identifier
+     * for the given protocol version of the player
+     *
+     * @param protocolVersion the protocol version used to work with the block palette for its version
+     * @param blockRuntimeId  which is used to retrieve the correct {@link org.terracottamc.taglib.nbt.tag.NBTTagCompound}
+     *
+     * @return a fresh {@link org.terracottamc.taglib.nbt.tag.NBTTagCompound}
+     */
+    public static NBTTagCompound retrieveBlockNBTByBlockRuntimeId(final int protocolVersion, final int blockRuntimeId) {
+        final Set<Map.Entry<Integer, NBTTagCompound>> blockNBTRuntimeIdEntries =
+                BedrockResourceDataReader.blockPalettes.get(protocolVersion).entrySet();
+
+        for (final Map.Entry<Integer, NBTTagCompound> blockNBTRuntimeIdEntry : blockNBTRuntimeIdEntries) {
+            if (blockNBTRuntimeIdEntry.getKey() == blockRuntimeId) {
+                return blockNBTRuntimeIdEntry.getValue();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns the block runtime identifier by its block identifier and
+     * the given {@link org.terracottamc.taglib.nbt.tag.NBTTagCompound}
+     *
+     * @param protocolVersion the protocol version used to work with the block palette for its version
+     * @param blockIdentifier which is needed to retrieve the block runtime id
+     * @param blockStatesTag  which are needed to retrieve the block runtime id
+     *
+     * @return a fresh block runtime id
+     */
+    public static int retrieveBlockRuntimeIdByBlockIdentifier(final int protocolVersion, final String blockIdentifier,
+                                                              final NBTTagCompound blockStatesTag) {
+        final Set<Map.Entry<Integer, NBTTagCompound>> blockNBTRuntimeIdEntries =
+                BedrockResourceDataReader.blockPalettes.get(protocolVersion).entrySet();
+
+        for (final Map.Entry<Integer, NBTTagCompound> blockNBTRuntimeIdEntry : blockNBTRuntimeIdEntries) {
+            final NBTTagCompound blockNBTTag = blockNBTRuntimeIdEntry.getValue();
+
+            if (blockNBTTag.getString("name").equalsIgnoreCase(blockIdentifier) &&
+                    blockNBTTag.getChildTag("states").equals(blockStatesTag)) {
+                return blockNBTRuntimeIdEntry.getKey();
+            }
+        }
+
+        return -1;
     }
 
     /**
