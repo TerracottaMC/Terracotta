@@ -16,5 +16,21 @@ public enum Difficulty {
     PEACEFUL,
     EASY,
     NORMAL,
-    HARD
+    HARD;
+
+    /**
+     * Retrieves this {@link org.terracottamc.world.Difficulty} by their identifier
+     *
+     * @param difficultyId which is used to retrieve this {@link org.terracottamc.world.Difficulty}
+     *
+     * @return a fresh {@link org.terracottamc.world.Difficulty}
+     */
+    public static Difficulty retrieveDifficultyById(final int difficultyId) {
+        for (final Difficulty difficulty : Difficulty.values()) {
+            if (difficulty.ordinal() == difficultyId) {
+                return difficulty;
+            }
+        }
+        return null;
+    }
 }

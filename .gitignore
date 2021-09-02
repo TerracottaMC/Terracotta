@@ -32,3 +32,4 @@ hs_err_pid*
 # Server files
 properties.json
 /resource_packs
+/worlds

@@ -2,6 +2,8 @@ package org.terracottamc.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializer;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.BufferedReader;
@@ -34,7 +36,16 @@ public class Config {
     private Map<String, Object> configurationData = new LinkedHashMap<>();
 
     private final ConfigType configType;
-    private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private final Gson gson = new GsonBuilder().setPrettyPrinting()
+            .registerTypeAdapter(Double.class, (JsonSerializer<Double>) (src, typeOfSrc, context) -> {
+                if (src == src.intValue()) {
+                    return new JsonPrimitive(src.intValue());
+                } else if (src == src.longValue()) {
+                    return new JsonPrimitive(src.longValue());
+                }
+
+                return new JsonPrimitive(src);
+            }).create();
     private final Properties properties = new Properties();
     private final Yaml yaml = new Yaml();
 

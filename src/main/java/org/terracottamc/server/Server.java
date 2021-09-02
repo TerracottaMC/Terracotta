@@ -1,5 +1,6 @@
 package org.terracottamc.server;
 
+import org.apache.commons.math3.util.FastMath;
 import org.terracottamc.config.Config;
 import org.terracottamc.config.ConfigType;
 import org.terracottamc.entity.player.GameMode;
@@ -13,6 +14,8 @@ import org.terracottamc.resourcepack.ResourcePackManager;
 import org.terracottamc.terminal.Terminal;
 import org.terracottamc.terminal.TerminalThread;
 import org.terracottamc.util.BedrockResourceDataReader;
+import org.terracottamc.world.World;
+import org.terracottamc.world.leveldb.LevelDBProvider;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,6 +24,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * Copyright (c) 2021, TerracottaMC
@@ -45,10 +50,15 @@ public class Server {
     private final MojangSecurityKeyFactory mojangSecurityKeyFactory;
     private final MojangSecurityDecryptionHelper mojangSecurityDecryptionHelper;
     private final File dataFolder;
+    private final BlockingQueue<Runnable> mainThreadWorker = new LinkedBlockingQueue<>();
+    private final Map<String, World> worlds = new HashMap<>();
 
     private RakNetListener rakNetListener;
     private TerminalThread terminalThread;
+    private Thread mainThread;
     private boolean running;
+    private int currentServerTick;
+    private World defaultWorld;
 
     private Config serverConfig;
 
@@ -75,7 +85,8 @@ public class Server {
      * Starts this {@link org.terracottamc.server.Server}
      */
     public void start() {
-        Thread.currentThread().setName("Terracotta Server-Thread");
+        this.mainThread = Thread.currentThread();
+        this.mainThread.setName("Terracotta Server-Thread");
 
         this.running = true;
 
@@ -110,6 +121,14 @@ public class Server {
         this.rakNetListener.bind();
 
         this.resourcePackManager.loadResourcePacks();
+
+        final String defaultWorldName = this.serverConfig.getString("defaultWorldName");
+
+        if (this.loadWorld(defaultWorldName)) {
+            this.defaultWorld = new World(defaultWorldName);
+        }
+
+        this.startTicking();
     }
 
     /**
@@ -176,6 +195,16 @@ public class Server {
      */
     public boolean isRunning() {
         return this.running;
+    }
+
+    /**
+     * Proofs whether this method is executed in another {@link java.lang.Thread}
+     * than the main {@link java.lang.Thread} of this {@link org.terracottamc.server.Server}
+     *
+     * @return if the main thread is present or not
+     */
+    public boolean isMainThread() {
+        return this.mainThread.getId() == Thread.currentThread().getId();
     }
 
     /**
@@ -299,6 +328,15 @@ public class Server {
     }
 
     /**
+     * Offers the given {@link java.lang.Runnable} to the main {@link java.lang.Thread}
+     *
+     * @param runnable that should be offered
+     */
+    public void offerToMainThread(final Runnable runnable) {
+        this.mainThreadWorker.offer(runnable);
+    }
+
+    /**
      * Adds a new {@link org.terracottamc.entity.player.Player} to this {@link org.terracottamc.server.Server}
      *
      * @param player who should be added
@@ -328,5 +366,91 @@ public class Server {
      */
     public void removePlayerByAddress(final InetSocketAddress socketAddress) {
         this.players.remove(socketAddress);
+    }
+
+    /**
+     * Retrieves the default {@link org.terracottamc.world.World} of this {@link org.terracottamc.server.Server}
+     *
+     * @return a fresh default {@link org.terracottamc.world.World}
+     */
+    public World getDefaultWorld() {
+        return this.defaultWorld;
+    }
+
+    /**
+     * Retrieves a {@link org.terracottamc.world.World} by its name
+     *
+     * @param worldName which is used to find the {@link org.terracottamc.world.World}
+     *
+     * @return a fresh searched {@link org.terracottamc.world.World}
+     */
+    public World getWorld(final String worldName) {
+        for (final World world : this.worlds.values()) {
+            if (world.getWorldName().equalsIgnoreCase(worldName)) {
+                return world;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Loads the given {@link org.terracottamc.world.World} by its name
+     *
+     * @param worldName which is used to load the {@link org.terracottamc.world.World}
+     *
+     * @return true, when the world loading was successful, otherwise false
+     */
+    public boolean loadWorld(final String worldName) {
+        if (this.worlds.containsKey(worldName)) {
+            this.logger.warn("The world \"" + worldName + "\" was already loaded");
+
+            return false;
+        }
+
+        final World world = new World(worldName);
+        final LevelDBProvider levelDBProvider = world.getLevelDBProvider();
+
+        if (levelDBProvider.loadWorldFile() && levelDBProvider.initializeDataBase()) {
+            this.worlds.put(worldName, world);
+            this.logger.info("The world \"" + worldName + "\" has been loaded successfully");
+
+            return true;
+        }
+
+        this.logger.error("The attempt to load the world \"" + worldName + "\" failed");
+
+        return false;
+    }
+
+    /**
+     * Stats the ticking of this {@link org.terracottamc.server.Server}
+     */
+    private void startTicking() {
+        // 50 milliseconds are equal to one tick
+        long deltaTime = 50;
+
+        while (this.running) {
+            this.currentServerTick++;
+
+            try {
+                Thread.sleep(FastMath.max(0, 50 - deltaTime));
+            } catch (final InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            final long startTime = System.currentTimeMillis();
+
+            // executes all runnable instances that were offered to the main thread
+            while (!this.mainThreadWorker.isEmpty()) {
+                final Runnable runnable = this.mainThreadWorker.poll();
+
+                if (runnable != null) {
+                    runnable.run();
+                }
+            }
+
+            deltaTime = System.currentTimeMillis() - startTime;
+        }
     }
 }
